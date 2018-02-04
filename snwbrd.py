@@ -3,26 +3,38 @@ from pygame.locals import *
 from OpenGL.GL import *
 from OpenGL.GLU import *
 import numpy as np
+import time
+from shape import Shape
 
 class Player():
     def __init__(self):
         self.m = 100
-        self.p = np.zeros(2)
-        self.f = 0.0
-        self.w = 0.3
-        self.l = 0.8
-        self.r = np.zeros(2)
+        self.friction_l = 0.01
+        self.loc = np.zeros(2)
+        self.vel = np.zeros(2)
+        self.acc = np.zeros(2)
+        self.board = Shape([[-1, -0.3],
+                            [1, -0.3],
+                            [1, 0.3],
+                            [-1, 0.3]])
+        self.m_board = 20
 
     def draw(self):
+        glBegin(GL_LINE_LOOP)
+        for p in self.board.points:
+            glVertex2fv(p)
+        glEnd()
         glPushMatrix()
-        glTranslatef(self.p[0], self.p[1], 0)
-        glRotatef(np.rad2deg(self.f), 0, 0, 1)
-        glPolygonMode(GL_FRONT, GL_LINE)
-        glRectf(-self.l/2, -self.w/2, self.l/2, self.w/2)
-        man_scale = 3
-        glTranslatef(self.r[0], self.r[1], 0)
-        glRectf(-self.l/2/man_scale, -self.w/2/man_scale, self.l/2/man_scale, self.w/2/man_scale)
+        # glTranslatef(*self.board.loc, 0)
+        glBegin(GL_POINTS)
+        glVertex2fv(self.loc)
+        glEnd()
         glPopMatrix()
+
+    def update(self):
+        dt = 0.01
+        self.board.update()
+        
         
 
 def draw():
@@ -30,7 +42,7 @@ def draw():
     # glEnable(GL_POINT_SMOOTH)
     # glEnable(GL_BLEND)
     # glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
-    glPointSize(5)
+    glPointSize(10)
 
     glBegin(GL_LINE_LOOP)
     glVertex3fv((1, 1, 0))
@@ -41,25 +53,35 @@ def draw():
     player.draw()
     pygame.display.flip()
 
-def handle_kb():
-    pressed = pygame.key.get_pressed()
-    speed = 0.01
-    if pressed[pygame.K_LSHIFT]: speed *= 3
-    if pressed[pygame.K_w]: player.r[1] += speed
-    if pressed[pygame.K_s]: player.r[1] -= speed
-    if pressed[pygame.K_a]: player.r[0] -= speed
-    if pressed[pygame.K_d]: player.r[0] += speed
-    board = np.array([player.l, player.w])
-    player.r = np.clip(player.r, -board/2, board/2)
+def handle_input():
+    x, y = pygame.mouse.get_pos()
+    print(x, y)
+    pos = screen_to_world(x, y)
+    if player.board.contains(pos):
+        player.loc = pos
+    player.update()
+
+
+def map_xy(x, y, src=(0, 0, 800, 600), trg=(-4/3, -1, 4/3, 1)):
+    sx = (world[2] - world[0]) / (screen[2] - screen[0])
+    sy = (world[3] - world[1]) / (screen[3] - screen[1])
+    scale = sx, sy
+    x = trg[0] + (x - src[0]) * scale[0]
+    y = trg[1] + (y - src[1]) * scale[1]
+    return x, y
+
+screen = 0, 0, 800, 600
+world = -4, 3, 4, -3
+def screen_to_world(x, y): return map_xy(x, y, screen, world)
+def world_to_screen(x, y): return map_xy(x, y, world, screen)
+
+
 
 def main():
     pygame.init()
-    display = (800,600)
-    pygame.display.set_mode(display, DOUBLEBUF|OPENGL)
+    pygame.display.set_mode(screen[2:], DOUBLEBUF|OPENGL)
 
-    h = 3
-    w = display[0] / display[1] * h
-    gluOrtho2D(-w/2, w/2, -h/2, h/2)
+    gluOrtho2D(world[0], world[2], world[3], world[1])
 
     while True:
         for event in pygame.event.get():
@@ -67,13 +89,12 @@ def main():
                 pygame.quit()
                 quit()
 
-        handle_kb()
+        handle_input()
         draw()
-        pygame.time.wait(10)
+        pygame.time.wait(5)
 
 player = Player()
-player.f = 0.3
-player.p = [0.5, 0.2]
-player.r = [0.4, 0.15]
+player.board.rot = -0.3
+player.board.loc = [1, 1]
 
 main()
