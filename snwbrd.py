@@ -4,7 +4,7 @@ from OpenGL.GL import *
 from OpenGL.GLU import *
 import numpy as np
 import time
-from shape import Shape
+from shape import Polygon
 
 class Player():
     def __init__(self):
@@ -13,7 +13,7 @@ class Player():
         self.loc = np.zeros(2)
         self.vel = np.zeros(2)
         self.acc = np.zeros(2)
-        self.board = Shape([[-1, -0.3],
+        self.board = Polygon([[-1, -0.3],
                             [1, -0.3],
                             [1, 0.3],
                             [-1, 0.3]])
